@@ -1,16 +1,18 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    id("com.vanniktech.maven.publish") version "0.29.0"
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
+        tasks.withType<KotlinJvmCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_1_8)
             }
         }
     }
@@ -60,7 +62,7 @@ dependencies {
 
 mavenPublishing {
     coordinates(
-        groupId = "io.github.kabirnayeem99", artifactId = "ktor2curl", version = "1.0.1"
+        groupId = "io.github.kabirnayeem99", artifactId = "ktor2curl", version = "1.0.2"
     )
 
     pom {

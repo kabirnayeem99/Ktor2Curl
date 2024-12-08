@@ -12,7 +12,7 @@ Add the following dependency to your commonMain source set:
 ```kotlin
 val commonMain by getting {
     dependencies {
-        implementation("io.github.kabirnayeem99:ktor2curl:1.0.1")
+        implementation("io.github.kabirnayeem99:ktor2curl:1.0.2")
     }
 }
 ```
@@ -26,7 +26,7 @@ Use the following dependency in your app module's build.gradle file:
 ```kotlin
 dependencies {
   // all other dependencies
-  implementation("io.github.kabirnayeem99:ktor2curl:1.0.1")
+  implementation("io.github.kabirnayeem99:ktor2curl:1.0.2")
 }
 ```
 
@@ -35,7 +35,7 @@ dependencies {
 ```groovy
 dependencies {
     // all other dependencies
-    implementation 'io.github.kabirnayeem99:ktor2curl:1.0.1'
+    implementation 'io.github.kabirnayeem99:ktor2curl:1.0.2'
 }
 ```
 
@@ -56,7 +56,7 @@ val client = HttpClient(CIO) {
 client.post("https://api.greenbirdregistry.com/v1/child-green-bird/bird-count") {
     headers {
         append(HttpHeaders.Authorization, "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg")
-        append(HttpHeaders.UserAgent, "KtorClient/2.3.12")
+        append(HttpHeaders.UserAgent, "KtorClient/3.0.2")
         append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     }
     setBody("""{"date": "2024-10-09", "bird_count": 16400}""")
@@ -67,7 +67,7 @@ Output:
 curl -X POST \
   https://api.greenbirdregistry.com/v1/child-green-bird/bird-count \
   -H "Authorization: Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg" \
-  -H "User-Agent: KtorClient/2.3.12" \
+  -H "User-Agent: KtorClient/3.0.2" \
   -H "Content-Type: application/json" \
   --data '{"date": "2024-10-09", "bird_count": 16400}'
 ```
@@ -88,7 +88,7 @@ val client = HttpClient(CIO) {
 client.post("https://api.greenbirdregistry.com/v1/child-green-bird/bird-count") {
     headers {
         append(HttpHeaders.Authorization, "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg")
-        append(HttpHeaders.UserAgent, "KtorClient/2.3.12")
+        append(HttpHeaders.UserAgent, "KtorClient/3.0.2")
         append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     }
     setBody("""{"date": "2024-10-09", "bird_count": 16400}""")
