@@ -63,8 +63,16 @@ internal fun HeadersBuilder.onHeaders(
 
 internal fun Any.onRequestBody(onBodyFound: (String) -> Unit) {
     val body = when (this) {
-        is TextContent -> io.ktor.utils.io.core.String(bytes())
-        is ByteArrayContent -> io.ktor.utils.io.core.String(bytes())
+        is TextContent -> {
+            val bytes = bytes()
+            bytes.decodeToString(0, 0 + bytes.size)
+        }
+
+        is ByteArrayContent -> {
+            val bytes = bytes()
+            bytes.decodeToString(0, 0 + bytes.size)
+        }
+
         is EmptyContent -> ""
         is MultiPartFormDataContent -> "[request body omitted]"
         is String -> this
