@@ -7,7 +7,11 @@ val KtorToCurl = createClientPlugin("KtorToCurlPlugin", ::KtorToCurlConfig) {
     val excludedHeaders = pluginConfig.excludedHeaders
     val maskedHeaders = pluginConfig.maskedHeaders
     onRequest { request, _ ->
-        val curl = generateCurl(request, excludedHeaders, maskedHeaders)
+        var curl = generateCurl(
+            request = request,
+            maskedHeaders = maskedHeaders,
+            excludedHeaders = excludedHeaders,
+        )
         if (curl.isNotBlank()) converter.log(curl)
     }
 }

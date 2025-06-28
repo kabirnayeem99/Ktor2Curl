@@ -1,6 +1,7 @@
 # Ktor2Curl: A Ktor Plugin for Generating cURL Commands
 
-Simple way to transform Ktor requests into cURL logs. Pure Kotllin library, supports both KMP and Android projects.
+Simple way to transform Ktor requests into cURL logs. Pure Kotllin library, supports both KMP and
+Android projects.
 It is inspired by [Ok2Curl](https://github.com/mrmike/Ok2Curl), which does the same for OkHttp.
 
 # Install
@@ -12,7 +13,7 @@ Add the following dependency to your commonMain source set:
 ```kotlin
 val commonMain by getting {
     dependencies {
-        implementation("io.github.kabirnayeem99:ktor2curl:1.0.2")
+        implementation("io.github.kabirnayeem99:ktor2curl:1.1.0")
     }
 }
 ```
@@ -25,8 +26,8 @@ Use the following dependency in your app module's build.gradle file:
 
 ```kotlin
 dependencies {
-  // all other dependencies
-  implementation("io.github.kabirnayeem99:ktor2curl:1.0.2")
+    // all other dependencies
+    implementation("io.github.kabirnayeem99:ktor2curl:1.1.0")
 }
 ```
 
@@ -35,7 +36,7 @@ dependencies {
 ```groovy
 dependencies {
     // all other dependencies
-    implementation 'io.github.kabirnayeem99:ktor2curl:1.0.2'
+    implementation 'io.github.kabirnayeem99:ktor2curl:1.1.0'
 }
 ```
 
@@ -53,24 +54,29 @@ val client = HttpClient(CIO) {
         }
     }
 }
-client.post("https://api.greenbirdregistry.com/v1/child-green-bird/bird-count") {
+
+client.post("https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json") {
     headers {
         append(HttpHeaders.Authorization, "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg")
         append(HttpHeaders.UserAgent, "KtorClient/3.0.2")
         append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     }
-    setBody("""{"date": "2024-10-09", "bird_count": 16400}""")
+    setBody("""{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}""")
 }
 ```
-Output: 
+
+Output:
+
 ```shell
 curl -X POST \
-  https://api.greenbirdregistry.com/v1/child-green-bird/bird-count \
+  https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json \
   -H "Authorization: Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg" \
-  -H "User-Agent: KtorClient/3.0.2" \
+  -H "User-Agent: KtorClient/3.2.0" \
   -H "Content-Type: application/json" \
-  --data '{"date": "2024-10-09", "bird_count": 16400}'
+  --data '{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}'
+
 ```
+
 For further configurations, such as excluding specific headers or masking sensitive information:
 
 ```kotlin
@@ -85,23 +91,30 @@ val client = HttpClient(CIO) {
         maskedHeaders = setOf("Authorization")  // Headers to mask in the log
     }
 }
-client.post("https://api.greenbirdregistry.com/v1/child-green-bird/bird-count") {
+client.post("https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json") {
     headers {
         append(HttpHeaders.Authorization, "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg")
         append(HttpHeaders.UserAgent, "KtorClient/3.0.2")
         append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     }
-    setBody("""{"date": "2024-10-09", "bird_count": 16400}""")
+    setBody("""{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}""")
 }
 ```
+
 Output:
+
 ```shell
 curl -X POST \
-  https://api.greenbirdregistry.com/v1/child-green-bird/bird-count \
+  https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json \
   -H "Authorization: [omitted]" \
   -H "Content-Type: application/json" \
-  --data '{"date": "2024-10-09", "bird_count": 16400}'
+  --data '{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}'
 ```
+
+For more information regarding this API, please,
+visit: https://data.techforpalestine.org/docs/casualties-daily/.
+& If you have any humanity left, speak up against the ongoing oppression of
+Terror state of Israel against Palestine.
 
 ## Contributions
 

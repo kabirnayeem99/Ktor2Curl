@@ -1,11 +1,10 @@
-import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.33.0"
 }
 
 kotlin {
@@ -47,7 +46,7 @@ kotlin {
 
 android {
     namespace = "io.github.kabirnayeem99.ktor2curl"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
         minSdk = 28
     }
@@ -62,7 +61,9 @@ dependencies {
 
 mavenPublishing {
     coordinates(
-        groupId = "io.github.kabirnayeem99", artifactId = "ktor2curl", version = "1.0.2"
+        groupId = "io.github.kabirnayeem99",
+        artifactId = "ktor2curl",
+        version = "1.1.0",
     )
 
     pom {
@@ -91,8 +92,9 @@ mavenPublishing {
         }
     }
 
+    publishToMavenCentral()
     // Configure publishing to Maven Central
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+//    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
     // Enable GPG signing for all publications
     signAllPublications()

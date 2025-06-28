@@ -16,7 +16,7 @@ internal suspend fun generateCurl(
 ): String {
     return coroutineScope {
         buildString {
-            append("curl -X ${request.method.value}")
+            append("curl -X ${request.method.value.uppercase()}")
 
             request.headers.onHeaders(
                 excludedHeaders = excludedHeaders,
@@ -26,7 +26,8 @@ internal suspend fun generateCurl(
                     if (contentType.isNotBlank()) append(" -H \"Content-Type: ${contentType}\"")
                 },
                 onEachHeader = { key, values ->
-                    append(" -H \"$key: ${values.joinToString("; ")}\"")
+                    val uniqueValues = values.distinctBy { it }
+                    append(" -H \"$key: ${uniqueValues.joinToString("; ")}\"")
                 },
             )
 
@@ -50,14 +51,15 @@ internal fun HeadersBuilder.onHeaders(
     }
 
     var containsContentType = false
-    headers.filterNot { h -> excludedHeaders.contains(h.key) }.forEach { (key, values) ->
-        if (maskedHeaders.contains(key)) {
-            onEachHeader(key, listOf("[masked]"))
-        } else {
-            onEachHeader(key, values)
+    headers.filterNot { h -> excludedHeaders.contains(h.key) }.toList().sortedBy { it.key }
+        .forEach { (key, values) ->
+            if (maskedHeaders.contains(key)) {
+                onEachHeader(key, listOf("[masked]"))
+            } else {
+                onEachHeader(key, values)
+            }
+            if (key == "Content-Type") containsContentType = true
         }
-        if (key == "Content-Type") containsContentType = true
-    }
     if (!containsContentType) onNoContentTypeHeader()
 }
 
@@ -74,10 +76,14 @@ internal fun Any.onRequestBody(onBodyFound: (String) -> Unit) {
         }
 
         is EmptyContent -> ""
-        is MultiPartFormDataContent -> "[request body omitted]"
+
+        is MultiPartFormDataContent -> headers.toString()
+
         is String -> this
+
         else -> toString()
     }
+
     if (body.isNotBlank()) onBodyFound(body)
 }
 
