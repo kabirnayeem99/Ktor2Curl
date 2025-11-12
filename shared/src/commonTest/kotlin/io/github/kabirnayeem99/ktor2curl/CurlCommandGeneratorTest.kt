@@ -63,7 +63,7 @@ class GenerateCurlTests {
             generateCurl(request, excludedHeaders = excludedHeaders)
 
         assertEquals(
-            "curl -X GET -H \"User-Agent: KtorClient\" -H \"Content-Type: application/json\" \"https://example.com/api\"",
+            "curl -X GET -H \"Content-Type: application/json\" -H \"User-Agent: KtorClient\" \"https://example.com/api\"",
             result
         )
     }
