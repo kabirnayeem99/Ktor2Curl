@@ -1,0 +1,18 @@
+#!/bin/sh
+# Pre-push: run the full test suite. A failing test aborts the push.
+# JVM + Android-unit commonTest always run; the iOS simulator target runs only on macOS
+# (the only host that can build the Darwin klib).
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+GRADLEW="$ROOT/gradlew"
+
+if [ "$(uname)" = "Darwin" ]; then
+    TASKS=":ktor2curl:jvmTest :ktor2curl:testDebugUnitTest :ktor2curl:iosSimulatorArm64Test"
+else
+    TASKS=":ktor2curl:jvmTest :ktor2curl:testDebugUnitTest"
+fi
+
+echo "[pre-push] running tests: $TASKS"
+"$GRADLEW" $TASKS --console=plain
+echo "[pre-push] all tests passed."

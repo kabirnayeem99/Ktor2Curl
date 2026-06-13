@@ -1,0 +1,6 @@
+root = true
+
+[*.{kt,kts}]
+# Expected-output curl/JSON literals in tests are deliberately long; wrapping them mid-string
+# hurts readability and ktlint cannot auto-correct it. Disable the rule, keep all others.
+ktlint_standard_max-line-length = disabled

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit: auto-format all Kotlin sources (every module + *.gradle.kts) with ktlint.
+# Non-blocking: formatting failures never abort the commit, they just print a warning.
+# Note: files are formatted in place but NOT re-staged — review & `git add` the fixes.
+
+echo "[pre-commit] ktlintFormat (auto-fixing all Kotlin files)…"
+if "$(git rev-parse --show-toplevel)/gradlew" ktlintFormat --console=plain; then
+    echo "[pre-commit] ktlint format clean."
+else
+    echo "[pre-commit] WARNING: ktlint reported issues it could not auto-fix (commit not blocked)."
+fi
+exit 0

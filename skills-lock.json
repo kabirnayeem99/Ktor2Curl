@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "tdd": {
+      "source": "citypaul/.dotfiles",
+      "sourceType": "github",
+      "skillPath": "claude/.claude/skills/tdd/SKILL.md",
+      "computedHash": "834dfa20e3ef5c07aa2ff5343b81a44592412c1f1da3f741f4335aa223c955c1"
+    }
+  }
+}

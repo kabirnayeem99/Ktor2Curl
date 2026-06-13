@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint + JVM + Android-unit run of commonTest. Fast Linux runner.
+  jvm-android:
+    name: ktlint + JVM + Android tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: ktlint check
+        run: ./gradlew ktlintCheck --console=plain
+
+      - name: JVM + Android unit tests
+        run: ./gradlew :ktor2curl:jvmTest :ktor2curl:testDebugUnitTest --console=plain
+
+  # iOS targets only build on macOS. Runs the same commonTest on the iOS simulator.
+  ios:
+    name: iOS simulator tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: iOS simulator tests
+        run: ./gradlew :ktor2curl:iosSimulatorArm64Test --console=plain
