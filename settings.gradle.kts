@@ -1,10 +1,12 @@
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 pluginManagement {
     repositories {
         google()
         gradlePluginPortal()
         mavenCentral()
     }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.10.0"
 }
 
 dependencyResolutionManagement {
@@ -15,4 +17,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Ktor2Curl"
-include(":shared")
+include(":ktor2curl")
+include(":sample")

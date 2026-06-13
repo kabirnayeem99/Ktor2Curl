@@ -2,7 +2,6 @@
 !*.xcodeproj/project.xcworkspace/
 !*.xcodeproj/xcshareddata/
 !*.xcworkspace/contents.xcworkspacedata
-!/gradle/wrapper/gradle-wrapper.jar
 **/xcshareddata/WorkspaceSettings.xcsettings
 *.aab
 *.apk
@@ -16,6 +15,7 @@
 *.ipr
 *.iws
 *.jar
+!/gradle/wrapper/gradle-wrapper.jar
 *.jks
 *.keystore
 *.log

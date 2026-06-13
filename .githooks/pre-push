@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pre-push: run the local mirror of GitHub Actions CI. Any failure aborts the push.
+# Delegates to scripts/ci-local.sh (single source of truth) so the hook and a manual
+# run can never drift: ktlintCheck + JVM/Android commonTest always run; the iOS
+# simulator target runs only on macOS (the only host that builds the Darwin klib).
+# Escape hatch: SKIP_IOS=1 git push   (skip the slow iOS job on macOS).
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+exec "$ROOT/scripts/ci-local.sh"
