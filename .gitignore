@@ -137,3 +137,5 @@ proguard/
 replay_pid*
 Temporary Items
 xcuserdata/
+.idea/*
+

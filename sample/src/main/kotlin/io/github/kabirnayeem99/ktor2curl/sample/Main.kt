@@ -5,6 +5,7 @@ import io.github.kabirnayeem99.ktor2curl.KtorToCurl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
@@ -22,10 +23,27 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
 
 private const val BASE = "https://data.techforpalestine.org/api/v2"
 private const val AUTH = "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg"
+
+/**
+ * A `@Serializable` request body. With [ContentNegotiation] installed, `setBody(victim)` is
+ * serialized to JSON by Ktor before the request is sent — and Ktor2Curl renders that JSON,
+ * not the Kotlin `toString()` (`Victim(enName=...)`).
+ */
+@Serializable
+private data class Victim(
+    val enName: String,
+    val name: String,
+    val age: Int,
+    val sex: String,
+    val id: String,
+    val source: String,
+)
 
 /**
  * Runnable demo of the [KtorToCurl] plugin: `./gradlew :sample:run`.
@@ -38,6 +56,8 @@ fun main() =
     runBlocking {
         val client =
             HttpClient(MockEngine { respond("ok", headers = headersOf(HttpHeaders.ContentType, "application/json")) }) {
+                // ContentNegotiation serializes @Serializable bodies to JSON before they are sent.
+                install(ContentNegotiation) { json() }
                 install(KtorToCurl) {
                     logger =
                         object : CurlLogger {
@@ -81,6 +101,23 @@ fun main() =
             }
             setBody(
                 """{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}""",
+            )
+        }
+
+        // POST data class — @Serializable body serialized to JSON by ContentNegotiation, then
+        // rendered as that JSON (not Victim(...) toString). The "id" value is still redacted.
+        client.post("$BASE/killed-in-gaza") {
+            header("Authorization", AUTH)
+            contentType(ContentType.Application.Json)
+            setBody(
+                Victim(
+                    enName = "Mazen Ahmed Mohammed Al-Kahlout",
+                    name = "مازن أحمد محمد الكحلوت",
+                    age = 52,
+                    sex = "m",
+                    id = "985194547",
+                    source = "u",
+                ),
             )
         }
 
