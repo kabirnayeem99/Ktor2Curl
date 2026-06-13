@@ -3,10 +3,14 @@ package io.github.kabirnayeem99.ktor2curl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.api.createClientPlugin
+import io.ktor.client.request.HttpRequestPipeline
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -50,7 +54,9 @@ class PluginIntegrationTests {
             client.get("https://example.com/api")
 
             assertEquals(1, recorder.logged.size)
-            assertEquals("curl 'https://example.com/api'", recorder.logged.single())
+            // Ktor adds a default `Accept: */*` header during the request pipeline; the plugin runs
+            // afterward (send pipeline), so the rendered curl reflects what is actually sent.
+            assertEquals("curl -H 'Accept: */*' 'https://example.com/api'", recorder.logged.single())
         }
 
     @Test
@@ -65,6 +71,43 @@ class PluginIntegrationTests {
                 recorder.logged.single().endsWith("-d 'key=value'"),
                 "expected -d body, got: ${recorder.logged.single()}",
             )
+        }
+
+    /** Mimics ContentNegotiation: serializes the data class to JSON in the same request-pipeline
+     * Transform phase a real content converter uses, so the plugin must observe the transformed
+     * body, not the raw object. */
+    private data class JsonBody(val id: Int, val name: String)
+
+    private val fakeNegotiation =
+        createClientPlugin("FakeJsonNegotiation") {
+            client.requestPipeline.intercept(HttpRequestPipeline.Transform) { body ->
+                if (body is JsonBody) {
+                    proceedWith(
+                        TextContent("""{"id":${body.id},"name":"${body.name}"}""", ContentType.Application.Json),
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun `data class body is rendered as its serialized content not toString`() =
+        runBlocking {
+            val recorder = RecordingLogger()
+            val engine = MockEngine { respond("ok", headers = headersOf(HttpHeaders.ContentType, "text/plain")) }
+            val client =
+                HttpClient(engine) {
+                    install(fakeNegotiation)
+                    install(KtorToCurl) { logger = recorder }
+                }
+
+            client.post("https://example.com/api") { setBody(JsonBody(7, "ktor")) }
+
+            val curl = recorder.logged.single()
+            assertTrue(
+                curl.contains("""-d '{"id":7,"name":"ktor"}'"""),
+                "expected serialized JSON body, got: $curl",
+            )
+            assertTrue(!curl.contains("JsonBody"), "data class toString leaked into curl: $curl")
         }
 
     @Test
@@ -86,6 +129,6 @@ class PluginIntegrationTests {
             client.get("https://allowed.com/api")
 
             assertEquals(1, recorder.logged.size)
-            assertEquals("curl 'https://allowed.com/api'", recorder.logged.single())
+            assertEquals("curl -H 'Accept: */*' 'https://allowed.com/api'", recorder.logged.single())
         }
 }

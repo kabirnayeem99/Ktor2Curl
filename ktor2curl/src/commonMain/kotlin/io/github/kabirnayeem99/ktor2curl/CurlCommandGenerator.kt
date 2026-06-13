@@ -36,7 +36,14 @@ internal suspend fun generateCurl(
             onNoContentTypeHeader = {
                 // The inferred Content-Type is not a real wire header, but it is routed through the
                 // transformer too so a hook that drops/rewrites "Content-Type" stays consistent.
-                val contentType = request.contentType()?.contentType ?: ""
+                // Prefer the explicit header; otherwise fall back to a serialized TextContent body's
+                // content type. ContentNegotiation moves Content-Type off request.headers and onto
+                // the TextContent it produces, so for a serialized data-class body the type lives
+                // only there — and Ktor still sends it on the wire, so the curl must show it.
+                // Deliberately limited to TextContent: multipart manages its own Content-Type via
+                // curl's -F (an explicit header with a stale boundary would break the request).
+                val inferred = request.contentType() ?: (request.body as? TextContent)?.contentType
+                val contentType = inferred?.toString().orEmpty()
                 if (contentType.isNotBlank()) {
                     options.headerTransformer("Content-Type", contentType)?.let { transformed ->
                         tail += "-H " + "Content-Type: $transformed".quoted(options.shell)

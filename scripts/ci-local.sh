@@ -53,5 +53,7 @@ else
 fi
 
 echo "[ci-local] host=$(uname)  tasks: $TASKS"
-"$GRADLEW" $TASKS --console=plain
+# eval so $TASKS word-splits into separate Gradle task args even under zsh, which (unlike the
+# /bin/sh shebang) does not split unquoted expansions. $TASKS holds only internal literals.
+eval "\"\$GRADLEW\" $TASKS --console=plain"
 echo "[ci-local] CI checks passed locally."

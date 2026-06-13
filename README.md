@@ -1,6 +1,7 @@
 # Ktor2Curl: A Ktor Plugin for Generating cURL Commands
 
-Transform Ktor HTTP requests into runnable `curl` commands for debugging and logging. Pure Kotlin library supporting KMP (Android, iOS, JVM) and standard Android projects.
+Transform Ktor HTTP requests into runnable `curl` commands for debugging and logging. Pure Kotlin
+library supporting KMP (Android, iOS, JVM) and standard Android projects.
 
 Inspired by [Ok2Curl](https://github.com/mrmike/Ok2Curl) for OkHttp.
 
@@ -28,7 +29,7 @@ Add to your `build.gradle.kts`:
 ```kotlin
 val commonMain by getting {
     dependencies {
-        implementation("io.github.kabirnayeem99:ktor2curl:2.0.0")
+        implementation("io.github.kabirnayeem99:ktor2curl:2.0.1")
     }
 }
 ```
@@ -41,7 +42,7 @@ Supports all KMP targets: Android, iOS (arm64/x64/simulator), JVM, JS, WASM.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kabirnayeem99:ktor2curl:2.0.0")
+    implementation("io.github.kabirnayeem99:ktor2curl:2.0.1")
 }
 ```
 
@@ -49,7 +50,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'io.github.kabirnayeem99:ktor2curl:2.0.0'
+    implementation 'io.github.kabirnayeem99:ktor2curl:2.0.1'
 }
 ```
 
@@ -61,7 +62,8 @@ After adding the dependency, run:
 ./gradlew build
 ```
 
-If you hit Kotlin version mismatch, ensure your project uses Kotlin 2.0+ (see [Troubleshooting](#troubleshooting)).
+If you hit Kotlin version mismatch, ensure your project uses Kotlin 2.0+ (
+see [Troubleshooting](#troubleshooting)).
 
 ## Quick Start
 
@@ -89,9 +91,10 @@ client.post("https://api.example.com/users") {
 ```
 
 **Output:**
+
 ```bash
 curl -X POST \
-  https://api.example.com/users \
+  https://data.techforpalestine.org/api/v2/users \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   --data '{"name":"Alice"}'
@@ -119,9 +122,10 @@ val client = HttpClient(CIO) {
 ```
 
 **Output:**
+
 ```bash
 curl -X POST \
-  https://api.example.com/users \
+  https://data.techforpalestine.org/api/v2/users \
   -H "Authorization: [omitted]" \
   -H "Content-Type: application/json" \
   --data '{"name":"Alice"}'
@@ -161,6 +165,7 @@ client.post("https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json") 
 ```
 
 **Output:**
+
 ```bash
 curl -X POST \
   https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json \
@@ -171,11 +176,11 @@ curl -X POST \
 
 ## Configuration Reference
 
-| Property | Type | Default | Purpose |
-|----------|------|---------|---------|
-| `converter` | `CurlLogger` | Required | Implementation to handle curl output (log it, send it, store it) |
-| `maskedHeaders` | `Set<String>` | `emptySet()` | Headers to replace with `[omitted]` (auth, tokens, keys) |
-| `excludedHeaders` | `Set<String>` | `emptySet()` | Headers to skip entirely in output |
+| Property          | Type          | Default      | Purpose                                                          |
+|-------------------|---------------|--------------|------------------------------------------------------------------|
+| `converter`       | `CurlLogger`  | Required     | Implementation to handle curl output (log it, send it, store it) |
+| `maskedHeaders`   | `Set<String>` | `emptySet()` | Headers to replace with `[omitted]` (auth, tokens, keys)         |
+| `excludedHeaders` | `Set<String>` | `emptySet()` | Headers to skip entirely in output                               |
 
 ## Advanced Usage
 
@@ -204,20 +209,23 @@ File uploads and form fields render correctly:
 
 ```kotlin
 client.post("https://api.example.com/upload") {
-    setBody(MultiPartFormDataContent(
-        formData {
-            append("file", InputProvider { "file content".byteInputStream() }, 
+    setBody(
+        MultiPartFormDataContent(
+            formData {
+                append(
+                    "file", InputProvider { "file content".byteInputStream() },
                     Headers.build { append(HttpHeaders.ContentDisposition, "filename=data.txt") })
-            append("field", "value")
-        }
-    ))
+                append("field", "value")
+            }
+        ))
 }
 ```
 
 **Output:**
+
 ```bash
 curl -X POST \
-  https://api.example.com/upload \
+  https://data.techforpalestine.org/api/v2/upload \
   -F "file=@data.txt" \
   -F "field=value"
 ```
@@ -229,6 +237,7 @@ curl -X POST \
 **Cause:** Kotlin version mismatch or incorrect repository.
 
 **Fix:**
+
 - Ensure Kotlin ≥ 2.0: `kotlin = "2.3.0"` or later in `plugins` block
 - Check repository is available:
   ```kotlin
@@ -237,13 +246,15 @@ curl -X POST \
       google()
   }
   ```
-- Verify dependency version exists on [Maven Central](https://mvnrepository.com/artifact/io.github.kabirnayeem99/ktor2curl)
+- Verify dependency version exists
+  on [Maven Central](https://mvnrepository.com/artifact/io.github.kabirnayeem99/ktor2curl)
 
 ### Issue: Curl command not logged
 
 **Cause:** Logger implementation not called.
 
 **Fix:**
+
 - Verify `converter` is set in plugin config
 - Check your logger is enabled (not filtered by Log level)
 - Confirm plugin is installed **before** making requests:
@@ -259,6 +270,7 @@ curl -X POST \
 **Cause:** Header not in `maskedHeaders` set.
 
 **Fix:**
+
 - Use exact header name (case-sensitive if using string literals):
   ```kotlin
   maskedHeaders = setOf(
@@ -273,6 +285,7 @@ curl -X POST \
 **Cause:** Header name mismatch (case/spelling).
 
 **Fix:**
+
 - Enable debug logging in your plugin and compare exact header names in requests
 - Use `HttpHeaders.HEADER_NAME` constants from Ktor when possible
 
@@ -281,6 +294,7 @@ curl -X POST \
 **Cause:** Kotlin < 2.3.0 incompatible with Ktor 3.5 on Native.
 
 **Fix:**
+
 - Upgrade to Kotlin ≥ 2.3.0:
   ```kotlin
   plugins {
@@ -292,7 +306,8 @@ curl -X POST \
 
 Contributions welcome. Before submitting:
 
-1. **Fork the repo** (click "Fork" on GitHub or run: `git clone --recursive https://github.com/YOUR_USERNAME/ktor2curl.git`)
+1. **Fork the repo** (click "Fork" on GitHub or run:
+   `git clone --recursive https://github.com/YOUR_USERNAME/ktor2curl.git`)
 2. **Create a branch** for your feature:
    ```bash
    git checkout -b feature/add-cookie-masking

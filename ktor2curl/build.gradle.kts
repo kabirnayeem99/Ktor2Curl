@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlinSerialization)
     id("com.vanniktech.maven.publish") version "0.33.0"
 }
 
@@ -40,6 +41,8 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.mock)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -69,7 +72,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.kabirnayeem99",
         artifactId = "ktor2curl",
-        version = "2.0.0",
+        version = "2.0.1",
     )
 
     pom {
