@@ -112,7 +112,7 @@ class DataClassBodyTest {
                     """"visitorData":"CgtsZG1ySnZiQWtSbyiMjuGSBg%3D%3D"}},""" +
                     """"browseId":"VLPL_pRLf9CPBPEvMTXA4rb-RNECtiH9C2NP",""" +
                     """"formData":{"selectedValues":["VN"]}}"""
-            assertTrue(curl.contains("-d '$expectedJson'"), "expected JSON -d body, got: $curl")
+            assertTrue(curl.contains("--data-binary '$expectedJson'"), "expected JSON --data-binary body, got: $curl")
 
             // The custom headers and the URL are present.
             assertTrue(curl.contains("-H 'Content-Type: application/json'"), "missing Content-Type: $curl")

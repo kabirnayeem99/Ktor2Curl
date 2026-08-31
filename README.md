@@ -29,12 +29,12 @@ Add to your `build.gradle.kts`:
 ```kotlin
 val commonMain by getting {
     dependencies {
-        implementation("io.github.kabirnayeem99:ktor2curl:2.0.1")
+        implementation("io.github.kabirnayeem99:ktor2curl:3.0.0")
     }
 }
 ```
 
-Supports all KMP targets: Android, iOS (arm64/x64/simulator), JVM, JS, WASM.
+Supports all KMP targets: Android, iOS (arm64/x64/simulator), JVM.
 
 ### Android Projects Only
 
@@ -42,7 +42,7 @@ Supports all KMP targets: Android, iOS (arm64/x64/simulator), JVM, JS, WASM.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kabirnayeem99:ktor2curl:2.0.1")
+    implementation("io.github.kabirnayeem99:ktor2curl:3.0.0")
 }
 ```
 
@@ -50,7 +50,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'io.github.kabirnayeem99:ktor2curl:2.0.1'
+    implementation 'io.github.kabirnayeem99:ktor2curl:3.0.0'
 }
 ```
 
@@ -72,11 +72,7 @@ see [Troubleshooting](#troubleshooting)).
 ```kotlin
 val client = HttpClient(CIO) {
     install(KtorToCurl) {
-        converter = object : CurlLogger {
-            override fun log(curl: String) {
-                println(curl)  // or use Android Log.d(), your logging framework, etc.
-            }
-        }
+        logger = CurlLogger.console()  // or use Android Log.d(), your logging framework, etc.
     }
 }
 
@@ -93,11 +89,7 @@ client.post("https://api.example.com/users") {
 **Output:**
 
 ```bash
-curl -X POST \
-  https://data.techforpalestine.org/api/v2/users \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data '{"name":"Alice"}'
+curl -H 'Authorization: Bearer YOUR_TOKEN' -H 'Content-Type: application/json' 'https://api.example.com/users' --data-binary '{"name":"Alice"}'
 ```
 
 ### With Sensitive Data Masking
@@ -107,11 +99,12 @@ Hide API keys, tokens, and custom auth headers from logs:
 ```kotlin
 val client = HttpClient(CIO) {
     install(KtorToCurl) {
-        converter = object : CurlLogger {
-            override fun log(curl: String) {
-                Log.d("API", curl)
+        logger =
+            object : CurlLogger {
+                override suspend fun log(curl: String) {
+                    Log.d("API", curl)
+                }
             }
-        }
         maskedHeaders = setOf(
             HttpHeaders.Authorization,
             "X-API-Key",
@@ -124,11 +117,7 @@ val client = HttpClient(CIO) {
 **Output:**
 
 ```bash
-curl -X POST \
-  https://data.techforpalestine.org/api/v2/users \
-  -H "Authorization: [omitted]" \
-  -H "Content-Type: application/json" \
-  --data '{"name":"Alice"}'
+curl -H 'Authorization: [masked]' -H 'Content-Type: application/json' 'https://api.example.com/users' --data-binary '{"name":"Alice"}'
 ```
 
 ### Hide Unnecessary Headers
@@ -138,11 +127,12 @@ Remove User-Agent, Content-Length, or other headers from logs:
 ```kotlin
 val client = HttpClient(CIO) {
     install(KtorToCurl) {
-        converter = object : CurlLogger {
-            override fun log(curl: String) {
-                Log.d("API", curl)
+        logger =
+            object : CurlLogger {
+                override suspend fun log(curl: String) {
+                    Log.d("API", curl)
+                }
             }
-        }
         excludedHeaders = setOf(
             HttpHeaders.UserAgent,
             HttpHeaders.ContentLength
@@ -167,19 +157,15 @@ client.post("https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json") 
 **Output:**
 
 ```bash
-curl -X POST \
-  https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json \
-  -H "Authorization: [omitted]" \
-  -H "Content-Type: application/json" \
-  --data '{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}'
+curl -H 'Authorization: [masked]' -H 'Content-Type: application/json' 'https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json' --data-binary '{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}'
 ```
 
 ## Configuration Reference
 
 | Property          | Type          | Default      | Purpose                                                          |
 |-------------------|---------------|--------------|------------------------------------------------------------------|
-| `converter`       | `CurlLogger`  | Required     | Implementation to handle curl output (log it, send it, store it) |
-| `maskedHeaders`   | `Set<String>` | `emptySet()` | Headers to replace with `[omitted]` (auth, tokens, keys)         |
+| `logger`          | `CurlLogger`  | No-op        | Implementation to handle curl output (log it, send it, store it) |
+| `maskedHeaders`   | `Set<String>` | `emptySet()` | Headers to replace with `[masked]` (auth, tokens, keys)          |
 | `excludedHeaders` | `Set<String>` | `emptySet()` | Headers to skip entirely in output                               |
 
 ## Advanced Usage
@@ -190,7 +176,7 @@ Send curl commands to a remote service, database, or aggregation tool:
 
 ```kotlin
 class RemoteCurlLogger : CurlLogger {
-    override fun log(curl: String) {
+    override suspend fun log(curl: String) {
         // Send to your backend, analytics, or debug dashboard
         analyticsService.trackRequest(curl)
     }
@@ -198,7 +184,7 @@ class RemoteCurlLogger : CurlLogger {
 
 val client = HttpClient(CIO) {
     install(KtorToCurl) {
-        converter = RemoteCurlLogger()
+        logger = RemoteCurlLogger()
     }
 }
 ```
@@ -224,10 +210,7 @@ client.post("https://api.example.com/upload") {
 **Output:**
 
 ```bash
-curl -X POST \
-  https://data.techforpalestine.org/api/v2/upload \
-  -F "file=@data.txt" \
-  -F "field=value"
+curl 'https://api.example.com/upload' -F 'file=@data.txt' -F 'field=value'
 ```
 
 ## Troubleshooting
@@ -255,7 +238,7 @@ curl -X POST \
 
 **Fix:**
 
-- Verify `converter` is set in plugin config
+- Verify `logger` is set in plugin config
 - Check your logger is enabled (not filtered by Log level)
 - Confirm plugin is installed **before** making requests:
   ```kotlin

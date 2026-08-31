@@ -68,8 +68,8 @@ class PluginIntegrationTests {
 
             assertEquals(1, recorder.logged.size)
             assertTrue(
-                recorder.logged.single().endsWith("-d 'key=value'"),
-                "expected -d body, got: ${recorder.logged.single()}",
+                recorder.logged.single().endsWith("--data-binary 'key=value'"),
+                "expected --data-binary body, got: ${recorder.logged.single()}",
             )
         }
 
@@ -104,7 +104,7 @@ class PluginIntegrationTests {
 
             val curl = recorder.logged.single()
             assertTrue(
-                curl.contains("""-d '{"id":7,"name":"ktor"}'"""),
+                curl.contains("""--data-binary '{"id":7,"name":"ktor"}'"""),
                 "expected serialized JSON body, got: $curl",
             )
             assertTrue(!curl.contains("JsonBody"), "data class toString leaked into curl: $curl")

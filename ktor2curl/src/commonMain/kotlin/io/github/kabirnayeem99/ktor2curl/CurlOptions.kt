@@ -41,7 +41,7 @@ data class CurlOptions(
     val maskPlaceholder: String = "[masked]",
     /** Shell dialect the command is quoted for. */
     val shell: CurlShell = CurlShell.Posix,
-    /** When set, text `-d` bodies longer than this are truncated with a trailing indicator. */
+    /** When set, text `--data-binary` bodies longer than this are truncated with a trailing indicator. */
     val maxBodyLength: Int? = null,
     /** When true, arguments are split across lines with `\` continuations for log readability. */
     val multiLine: Boolean = false,
@@ -59,7 +59,7 @@ data class CurlOptions(
     val retry: Int? = null,
     /** When false, all header arguments (and the inferred `Content-Type`) are omitted. */
     val showHeaders: Boolean = true,
-    /** When false, the `-d` / `-F` body argument is omitted. */
+    /** When false, the `--data-binary` / `-F` body argument is omitted. */
     val showBody: Boolean = true,
     /**
      * Separator placed between curl components. When null, the separator is derived from
@@ -72,4 +72,25 @@ data class CurlOptions(
      * to drop that value. Defaults to identity (leave every value unchanged). See [HeaderTransformer].
      */
     val headerTransformer: HeaderTransformer = { _, value -> value },
-)
+    /**
+     * Upper bound on multipart bytes materialized for curl rendering. Bodies larger than this (by
+     * declared `Content-Length`, or discovered while streaming) render as a `[multipart body
+     * omitted]` placeholder instead. Defaults to 1 MiB.
+     */
+    val maxMultipartBytes: Long = 1L * 1024 * 1024,
+) {
+    /**
+     * Precompiled per-key redaction patterns for [maskedJsonKeys], built once per [CurlOptions]
+     * instance instead of on every [generateCurl] call — this plugin runs once per outgoing
+     * request, so recompiling a [Regex] per masked key per request would repeat needless work.
+     */
+    internal val maskedJsonKeyRegexes: List<Regex> by lazy {
+        maskedJsonKeys.map { key ->
+            val escaped = Regex.escape(key)
+            Regex(
+                """("$escaped"\s*:\s*)("(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?|true|false|null)""",
+                RegexOption.IGNORE_CASE,
+            )
+        }
+    }
+}

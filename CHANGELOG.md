@@ -4,6 +4,49 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-08-31
+
+### Breaking
+
+- **`KtorToCurlConfig.converter` renamed to `logger`, and `CurlLogger.log` is now
+  `suspend`.** Existing plugin configs must rename `converter = ...` to
+  `logger = ...`, and custom `CurlLogger` implementations must mark `log`
+  `suspend` (it may now do async work, e.g. writing to disk or a network sink,
+  without blocking the send pipeline).
+- Truncated/binary/streaming bodies now render via `--data-binary` instead of
+  `-d` for every text body, not only the previously-covered cases — `-d`
+  silently strips CR/LF, which would desync a multi-line body from what was
+  actually sent; `--data-binary` sends it byte-for-byte.
+
+### Added
+
+- `CurlLogger.console()` — convenience factory for a logger that writes to
+  stdout via `println`.
+- `CurlOptions.maxMultipartBytes` / `KtorToCurlConfig.maxMultipartBytes` — caps
+  how much of a multipart body is materialized for rendering (default 1 MiB);
+  larger bodies render as `[multipart body omitted]` instead of risking OOM on
+  a multi-megabyte upload.
+
+### Fixed
+
+- **`FormDataContent` (Ktor's `application/x-www-form-urlencoded` API) no
+  longer renders as a garbled object reference.** The body-type check matched
+  only the concrete `ByteArrayContent` class, not the abstract
+  `OutgoingContent.ByteArrayContent` that `FormDataContent` extends directly,
+  so it fell through to a raw `toString()`. Widened to catch any
+  `OutgoingContent.ByteArrayContent` implementer.
+- **Credential masking no longer leaks the raw URL when it fails to re-parse.**
+  If `URLBuilder` couldn't re-parse a malformed URL, `maskUrl` fell back to
+  returning it completely unmasked — defeating the point of masking exactly
+  when it mattered most. It now falls back to regex-based best-effort
+  redaction of `user:pass@` credentials and `maskedQueryParams` instead.
+
+### Internal
+
+- Added ~53 new tests across four new files (content-type/API-surface
+  coverage, internationalization, adversarial/robustness edge cases, and
+  scale/lifecycle behavior), plus Kover coverage tooling.
+
 ## [2.0.1] - 2026-06-13
 
 ### Fixed
@@ -47,5 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quoting (POSIX / PowerShell / Windows CMD), and the `KtorToCurl` Ktor client
   plugin. KMP targets: `android`, `jvm`, `iosX64`, `iosArm64`, `iosSimulatorArm64`.
 
+[3.0.0]: https://github.com/kabirnayeem99/Ktor2Curl/compare/v2.0.1...v3.0.0
 [2.0.1]: https://github.com/kabirnayeem99/Ktor2Curl/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kabirnayeem99/Ktor2Curl/releases/tag/v2.0.0

@@ -33,7 +33,7 @@ class KtorToCurlConfig {
     /** Shell dialect the emitted command is quoted for. */
     var shell: CurlShell = CurlShell.Posix
 
-    /** When set, text `-d` bodies longer than this are truncated with a trailing indicator. */
+    /** When set, text `--data-binary` bodies longer than this are truncated with a trailing indicator. */
     var maxBodyLength: Int? = null
 
     /** When true, arguments are split across lines with `\` continuations for readability. */
@@ -60,7 +60,7 @@ class KtorToCurlConfig {
     /** When false, all header arguments (and the inferred `Content-Type`) are omitted. */
     var showHeaders: Boolean = true
 
-    /** When false, the `-d` / `-F` body argument is omitted. */
+    /** When false, the `--data-binary` / `-F` body argument is omitted. */
     var showBody: Boolean = true
 
     /**
@@ -74,6 +74,12 @@ class KtorToCurlConfig {
      * rewritten value, or `null` to drop that value. Defaults to identity. See [HeaderTransformer].
      */
     var headerTransformer: HeaderTransformer = { _, value -> value }
+
+    /**
+     * Upper bound on multipart bytes materialized for curl rendering. Bodies larger than this
+     * render as a `[multipart body omitted]` placeholder instead. Defaults to 1 MiB.
+     */
+    var maxMultipartBytes: Long = 1L * 1024 * 1024
 
     /** Adds [names] to [excludedHeaders]. */
     fun excludeHeader(vararg names: String) {
@@ -116,5 +122,6 @@ class KtorToCurlConfig {
             showBody = showBody,
             componentDelimiter = componentDelimiter,
             headerTransformer = headerTransformer,
+            maxMultipartBytes = maxMultipartBytes,
         )
 }

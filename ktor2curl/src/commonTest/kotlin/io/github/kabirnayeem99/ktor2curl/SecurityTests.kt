@@ -22,9 +22,9 @@ class SecurityTests {
                 }
 
             val result = generateCurl(request)
-            // Expecting: curl 'https://example.com' -d 'user'\''s-data'
+            // Expecting: curl 'https://example.com' --data-binary 'user'\''s-data'
 
-            assertEquals("curl 'https://example.com' -d 'user'\\''s-data'", result)
+            assertEquals("curl 'https://example.com' --data-binary 'user'\\''s-data'", result)
         }
 
     @Test
@@ -38,7 +38,7 @@ class SecurityTests {
                 }
 
             val result = generateCurl(request)
-            assertEquals("curl 'https://example.com' -d '$(id)'", result)
+            assertEquals("curl 'https://example.com' --data-binary '$(id)'", result)
         }
 
     @Test
@@ -52,7 +52,7 @@ class SecurityTests {
                 }
 
             val result = generateCurl(request)
-            assertEquals("curl 'https://example.com' -d '`id`'", result)
+            assertEquals("curl 'https://example.com' --data-binary '`id`'", result)
         }
 
     @Test
@@ -66,7 +66,7 @@ class SecurityTests {
                 }
 
             val result = generateCurl(request)
-            assertEquals("curl 'https://example.com' -d 'data | malicious-cmd'", result)
+            assertEquals("curl 'https://example.com' --data-binary 'data | malicious-cmd'", result)
         }
 
     @Test
@@ -80,7 +80,7 @@ class SecurityTests {
                 }
 
             val result = generateCurl(request)
-            assertEquals("curl 'https://example.com' -d 'data & malicious-cmd'", result)
+            assertEquals("curl 'https://example.com' --data-binary 'data & malicious-cmd'", result)
         }
 
     @Test
@@ -95,7 +95,7 @@ class SecurityTests {
 
             val result = generateCurl(request)
             // In single quotes, newlines are preserved as literal newlines.
-            assertEquals("curl 'https://example.com' -d 'line1\nline2'", result)
+            assertEquals("curl 'https://example.com' --data-binary 'line1\nline2'", result)
         }
 
     @Test

@@ -17,8 +17,9 @@ val KtorToCurl =
         client.sendPipeline.intercept(HttpSendPipeline.Monitoring) {
             val request = context
             if (shouldLog(request)) {
-                val curl = generateCurl(request = request, options = options)
-                if (curl.isNotBlank()) logger.log(curl)
+                // generateCurl always emits at least "curl <url>" (the URL argument is appended
+                // unconditionally), so the result is never blank — no guard needed before logging.
+                logger.log(generateCurl(request = request, options = options))
             }
         }
     }

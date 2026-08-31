@@ -51,7 +51,7 @@ class GenerateCurlTests {
 
             val result = generateCurl(request, excludedHeaders = emptySet())
 
-            assertEquals("curl 'https://example.com/api' -d 'key=value'", result)
+            assertEquals("curl 'https://example.com/api' --data-binary 'key=value'", result)
         }
 
     @Test
@@ -91,7 +91,7 @@ class GenerateCurlTests {
             val result = generateCurl(request, excludedHeaders = emptySet())
 
             // Since there is no Content-Type header, onNoContentTypeHeader should trigger but not add anything
-            assertEquals("curl 'https://example.com/api' -d 'key=value'", result)
+            assertEquals("curl 'https://example.com/api' --data-binary 'key=value'", result)
         }
 
     @Test
@@ -108,7 +108,7 @@ class GenerateCurlTests {
             val result = generateCurl(request, excludedHeaders = emptySet())
 
             assertEquals(
-                "curl -H 'Content-Type: application/json' 'https://example.com/api' -d '{ \"key\": \"value\" }'",
+                "curl -H 'Content-Type: application/json' 'https://example.com/api' --data-binary '{ \"key\": \"value\" }'",
                 result,
             )
         }
@@ -132,7 +132,7 @@ class GenerateCurlTests {
             val result = generateCurl(request, excludedHeaders = excludedHeaders)
 
             assertEquals(
-                "curl -H 'Content-Type: application/json' -H 'User-Agent: KtorClient' 'https://example.com/api' -d '{ \"key\": \"value\" }'",
+                "curl -H 'Content-Type: application/json' -H 'User-Agent: KtorClient' 'https://example.com/api' --data-binary '{ \"key\": \"value\" }'",
                 result,
             )
         }
@@ -546,7 +546,7 @@ class BinaryContentTests {
             val result = generateCurl(request, excludedHeaders = setOf("Content-Type"))
 
             assertEquals(
-                "curl 'https://example.com/upload' -d '[binary body omitted]'",
+                "curl 'https://example.com/upload' --data-binary '[binary body omitted]'",
                 result,
             )
         }
@@ -623,7 +623,7 @@ class KmpEncodingTests {
             val result = generateCurl(request, excludedHeaders = emptySet())
 
             assertEquals(
-                "curl 'https://example.com/api' -d '{\"city\":\"São Paulo\"}'",
+                "curl 'https://example.com/api' --data-binary '{\"city\":\"São Paulo\"}'",
                 result,
             )
         }
@@ -638,7 +638,7 @@ class WhitespaceBodyTests {
     }
 
     @Test
-    fun `generateCurl with whitespace-only body omits the -d flag`() =
+    fun `generateCurl with whitespace-only body omits the --data-binary flag`() =
         runBlocking {
             val request =
                 HttpRequestBuilder().apply {

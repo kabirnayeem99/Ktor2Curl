@@ -76,7 +76,7 @@ class WindowsCmdQuotingTests {
             val options = CurlOptions(shell = CurlShell.WindowsCmd)
             val result = request.toCurl(options)
 
-            assertTrue(result.contains("-d \"hello world\""), "Expected double-quoted body, got: $result")
+            assertTrue(result.contains("--data-binary \"hello world\""), "Expected double-quoted body, got: $result")
         }
 
     @Test
@@ -92,8 +92,8 @@ class WindowsCmdQuotingTests {
             val options = CurlOptions(shell = CurlShell.WindowsCmd)
             val result = request.toCurl(options)
 
-            // Body: say "hello"  → -d "say \"hello\""
-            assertTrue(result.contains("""-d "say \"hello\"" """.trim()), "Expected escaped inner quotes, got: $result")
+            // Body: say "hello"  → --data-binary "say \"hello\""
+            assertTrue(result.contains("""--data-binary "say \"hello\"" """.trim()), "Expected escaped inner quotes, got: $result")
         }
 
     @Test
@@ -130,7 +130,7 @@ class PowerShellQuotingTests {
             val options = CurlOptions(shell = CurlShell.PowerShell)
             val result = request.toCurl(options)
 
-            assertTrue(result.contains("-d 'hello world'"), "Expected single-quoted body, got: $result")
+            assertTrue(result.contains("--data-binary 'hello world'"), "Expected single-quoted body, got: $result")
         }
 
     @Test
@@ -146,8 +146,8 @@ class PowerShellQuotingTests {
             val options = CurlOptions(shell = CurlShell.PowerShell)
             val result = request.toCurl(options)
 
-            // Body: it's here → -d 'it''s here'
-            assertTrue(result.contains("-d 'it''s here'"), "Expected doubled single quote, got: $result")
+            // Body: it's here → --data-binary 'it''s here'
+            assertTrue(result.contains("--data-binary 'it''s here'"), "Expected doubled single quote, got: $result")
         }
 
     @Test
@@ -163,8 +163,8 @@ class PowerShellQuotingTests {
             val options = CurlOptions(shell = CurlShell.PowerShell)
             val result = request.toCurl(options)
 
-            // Body: it's a 'test'  → -d 'it''s a ''test'''
-            assertTrue(result.contains("-d 'it''s a ''test'''"), "Expected doubled single quotes, got: $result")
+            // Body: it's a 'test'  → --data-binary 'it''s a ''test'''
+            assertTrue(result.contains("--data-binary 'it''s a ''test'''"), "Expected doubled single quotes, got: $result")
         }
 }
 
@@ -187,7 +187,7 @@ class PosixQuotingSanityTests {
             val result = request.toCurl()
 
             // user's data → 'user'\''s data'
-            assertEquals("curl 'https://example.com/api' -d 'user'\\''s data'", result)
+            assertEquals("curl 'https://example.com/api' --data-binary 'user'\\''s data'", result)
         }
 
     @Test
@@ -549,7 +549,7 @@ class MultiLineTests {
             val options = CurlOptions(multiLine = true)
             val result = request.toCurl(options)
 
-            // With body, POST is default so no -X. Segments: curl / 'url' / -d 'body'
+            // With body, POST is default so no -X. Segments: curl / 'url' / --data-binary 'body'
             // joined with " \\\n  "
             val lines = result.split(" \\\n  ")
             assertTrue(lines.size >= 2, "Expected at least 2 segments for multi-line, got: ${lines.size}")
@@ -1036,7 +1036,7 @@ class ComponentSelectorTests {
             val result = request.toCurl(CurlOptions(showHeaders = false))
 
             assertFalse(result.contains("Content-Type"), "Inferred Content-Type should be omitted, got: $result")
-            assertTrue(result.contains("-d 'body'"), "Body should still be present when only headers are hidden")
+            assertTrue(result.contains("--data-binary 'body'"), "Body should still be present when only headers are hidden")
         }
 
     @Test
@@ -1055,7 +1055,7 @@ class ComponentSelectorTests {
         }
 
     @Test
-    fun `showBody=false omits the -d body argument`() =
+    fun `showBody=false omits the --data-binary body argument`() =
         runBlocking {
             val request =
                 HttpRequestBuilder().apply {
@@ -1082,7 +1082,7 @@ class ComponentSelectorTests {
 
             val result = request.toCurl(CurlOptions(showBody = false))
 
-            // With the body hidden, curl can no longer infer POST from a -d, so -X POST is emitted.
+            // With the body hidden, curl can no longer infer POST from --data-binary, so -X POST is emitted.
             assertTrue(result.contains("-X POST"), "Expected -X POST when body hidden, got: $result")
         }
 
@@ -1123,7 +1123,7 @@ class ComponentDelimiterTests {
             val result = request.toCurl(CurlOptions(componentDelimiter = " | "))
 
             assertTrue(result.contains(" | "), "Expected custom delimiter, got: $result")
-            assertEquals("curl | 'https://example.com/api' | -d 'body'", result)
+            assertEquals("curl | 'https://example.com/api' | --data-binary 'body'", result)
         }
 
     @Test
@@ -1345,7 +1345,7 @@ class HeaderTransformerTests {
             val result = request.toCurl(options)
 
             assertFalse(result.contains("Content-Type"), "Inferred Content-Type dropped by transformer should be absent, got: $result")
-            assertTrue(result.contains("-d 'body'"), "Body should still render")
+            assertTrue(result.contains("--data-binary 'body'"), "Body should still render")
         }
 
     @Test

@@ -3,8 +3,8 @@ package io.github.kabirnayeem99.ktor2curl
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.utils.EmptyContent
-import io.ktor.content.ByteArrayContent
 import io.ktor.content.TextContent
+import io.ktor.http.ContentType
 import io.ktor.http.HeadersBuilder
 import io.ktor.http.URLBuilder
 import io.ktor.http.content.OutgoingContent
@@ -64,7 +64,7 @@ internal suspend fun generateCurl(
         if (body is MultiPartFormDataContent) {
             // coroutineScope only wraps the multipart materialization, which needs a scope to
             // drain the body channel; the rest of the command is built synchronously.
-            coroutineScope { parseMultipartFormParts(body) }
+            coroutineScope { parseMultipartFormParts(body, options.maxMultipartBytes) }
                 .forEach { part ->
                     tail += "-F " + part.quoted(options.shell)
                     hasBody = true
@@ -72,14 +72,17 @@ internal suspend fun generateCurl(
         } else {
             body.onRequestBody { found ->
                 val processed = truncateBody(redactJson(found, options), options.maxBodyLength)
-                tail += "-d " + processed.quoted(options.shell)
+                // --data-binary (not -d/--data) so curl sends the body byte-for-byte: -d silently
+                // strips CR/LF from the payload, which would desync the command from a multi-line
+                // text/plain or pretty-printed body.
+                tail += "--data-binary " + processed.quoted(options.shell)
                 hasBody = true
             }
         }
     }
 
-    // curl infers the method from body presence: no body defaults to GET, a -d/-F body defaults
-    // to POST. Emit -X only when the method differs from that default, to cut redundant noise.
+    // curl infers the method from body presence: no body defaults to GET, a --data-binary/-F body
+    // defaults to POST. Emit -X only when the method differs from that default, to cut redundant noise.
     val methodIsDefault = (method == "GET" && !hasBody) || (method == "POST" && hasBody)
 
     val args = mutableListOf("curl")
@@ -110,14 +113,17 @@ internal suspend fun generateCurl(
  * when a per-part Content-Type is present). On any failure a single `[multipart body
  * omitted]` placeholder is returned, since file/streaming parts may be one-shot.
  *
- * Bodies larger than [MAX_MULTIPART_BYTES] are not materialized — rendering a curl line for
+ * Bodies larger than [maxMultipartBytes] are not materialized — rendering a curl line for
  * a multi-megabyte upload is useless and reading it all into a String would risk OOM, so the
  * placeholder is returned instead. Known oversize lengths short-circuit before the channel is
  * opened; unknown lengths are read with a hard cap.
  */
-internal suspend fun CoroutineScope.parseMultipartFormParts(content: MultiPartFormDataContent): List<String> {
+internal suspend fun CoroutineScope.parseMultipartFormParts(
+    content: MultiPartFormDataContent,
+    maxMultipartBytes: Long = MAX_MULTIPART_BYTES,
+): List<String> {
     content.contentLength?.let { length ->
-        if (length > MAX_MULTIPART_BYTES) return listOf(MULTIPART_OMITTED)
+        if (length > maxMultipartBytes) return listOf(MULTIPART_OMITTED)
     }
     val rendered =
         try {
@@ -125,26 +131,41 @@ internal suspend fun CoroutineScope.parseMultipartFormParts(content: MultiPartFo
             // Read one byte past the cap so an exactly-at-limit body still renders while anything
             // larger is detected and dropped.
             val channel = job.channel
-            val bytes = channel.readRemaining(MAX_MULTIPART_BYTES + 1).readByteArray()
-            if (bytes.size > MAX_MULTIPART_BYTES) {
+            val bytes = channel.readRemaining(maxMultipartBytes + 1).readByteArray()
+            if (bytes.size > maxMultipartBytes) {
                 channel.cancel(null)
                 return listOf(MULTIPART_OMITTED)
             }
-            val text = bytes.decodeToString()
-            val boundary = content.contentType.parameter("boundary") ?: detectBoundary(text)
-            if (boundary.isNullOrBlank()) return listOf(MULTIPART_OMITTED)
-            renderFormParts(text, boundary)
+            renderMultipartBody(bytes.decodeToString(), content.contentType)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Throwable) {
             return listOf(MULTIPART_OMITTED)
         }
-    return rendered.ifEmpty { listOf(MULTIPART_OMITTED) }
+    return rendered
+}
+
+/**
+ * Resolves the multipart boundary from [contentType] (falling back to sniffing it out of [text])
+ * and renders each part. Returns [MULTIPART_OMITTED] when no boundary can be resolved, or when
+ * parsing yields no parts. Pulled out of [parseMultipartFormParts] as a plain string-in/list-out
+ * function so these fallback paths are unit-testable without a real multipart channel.
+ */
+internal fun renderMultipartBody(
+    text: String,
+    contentType: ContentType,
+): List<String> {
+    val boundary = contentType.parameter("boundary") ?: detectBoundary(text)
+    if (boundary.isNullOrBlank()) return listOf(MULTIPART_OMITTED)
+    return renderFormParts(text, boundary).ifEmpty { listOf(MULTIPART_OMITTED) }
 }
 
 private const val MULTIPART_OMITTED = "[multipart body omitted]"
 
-/** Upper bound on multipart bytes materialized for curl rendering. Larger bodies are omitted. */
+/**
+ * Default upper bound on multipart bytes materialized for curl rendering, used when
+ * [parseMultipartFormParts] is called without an explicit [CurlOptions.maxMultipartBytes].
+ */
 internal const val MAX_MULTIPART_BYTES = 1L * 1024 * 1024
 
 /**
@@ -196,14 +217,56 @@ private fun maskUrl(
         }
         builder.buildString()
     } catch (_: Throwable) {
-        raw
+        // The URLBuilder round-trip failed on a malformed URL. Masking exists specifically so
+        // secrets don't end up in logs, so falling back to the fully raw (unmasked) string here
+        // would defeat that purpose exactly when parsing is least trustworthy. Best-effort
+        // regex-based redaction instead, mirroring redactJson's tradeoff of "not a real parser,
+        // but never leak the secret it was told to mask".
+        maskUrlBestEffort(raw, options, maskUserInfo)
     }
+}
+
+// Matches the userinfo segment of an authority: "//user:pass@" up to the LAST "@" before the next
+// "/", "?", "#", or whitespace. The character class deliberately does not exclude "@" itself: the
+// greedy `*` backtracks to the rightmost "@" in the authority, so a malformed, doubly-"@" userinfo
+// like "//user@name:pass@host" still has its whole userinfo (including the real password after the
+// second "@") masked, instead of only the substring up to the first "@". Anchored on "//" (not
+// "://") so both "scheme://" and a schemeless/protocol-relative "//" authority are caught.
+// Deliberately collapses user *and* password into one placeholder rather than trying to tell them
+// apart with a regex — good enough for a fallback whose only job is "don't leak it".
+private val USERINFO_REGEX = Regex("""//[^/?#\s]*@""")
+
+/**
+ * Regex-based, best-effort fallback used only when [URLBuilder] itself cannot parse [raw] (so the
+ * precise, encoding-aware masking in [maskUrl] isn't available). Purely textual substitution: no
+ * URL parsing, so it can both over- and under-match compared to the primary path, but it never
+ * returns [raw] untouched when masking was requested — the fallback exists to avoid ever leaking a
+ * secret onto this codepath rather than to be a general URL masker.
+ */
+private fun maskUrlBestEffort(
+    raw: String,
+    options: CurlOptions,
+    maskUserInfo: Boolean,
+): String {
+    var result = raw
+    if (maskUserInfo) {
+        result = USERINFO_REGEX.replace(result) { "//${options.maskPlaceholder}@" }
+    }
+    for (param in options.maskedQueryParams) {
+        val paramRegex = Regex("""([?&]${Regex.escape(param)}=)[^&#]*""", RegexOption.IGNORE_CASE)
+        result = paramRegex.replace(result) { match -> match.groupValues[1] + options.maskPlaceholder }
+    }
+    return result
 }
 
 /**
  * Deep-redacts JSON values for [CurlOptions.maskedJsonKeys] anywhere in [body], at any nesting
  * depth. Regex-based (no JSON parser dependency): matches `"key": <string|number|bool|null>` and
  * replaces the value with a quoted [CurlOptions.maskPlaceholder]. Keys match case-insensitively.
+ *
+ * Being regex-based rather than a real JSON parse, this can also match a `"key": ...` shape that
+ * occurs inside a string *value* (e.g. a body embedding another JSON document as a string field)
+ * — an accepted tradeoff to avoid a JSON parser dependency for a debug-logging tool.
  */
 private fun redactJson(
     body: String,
@@ -211,13 +274,7 @@ private fun redactJson(
 ): String {
     if (options.maskedJsonKeys.isEmpty()) return body
     var result = body
-    for (key in options.maskedJsonKeys) {
-        val escaped = Regex.escape(key)
-        val regex =
-            Regex(
-                """("$escaped"\s*:\s*)("(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?|true|false|null)""",
-                RegexOption.IGNORE_CASE,
-            )
+    for (regex in options.maskedJsonKeyRegexes) {
         result = regex.replace(result) { match -> match.groupValues[1] + "\"${options.maskPlaceholder}\"" }
     }
     return result
@@ -354,7 +411,11 @@ internal fun Any.onRequestBody(onBodyFound: (String) -> Unit) {
             when (this) {
                 is TextContent -> bytes().decodeBodyOrBinary()
 
-                is ByteArrayContent -> bytes().decodeBodyOrBinary()
+                // OutgoingContent.ByteArrayContent (not the narrower io.ktor.content.ByteArrayContent
+                // subclass) so any implementer — including Ktor's own FormDataContent, which extends
+                // the abstract class directly — is caught here instead of falling to the toString()
+                // branch below and rendering as a garbled object reference.
+                is OutgoingContent.ByteArrayContent -> bytes().decodeBodyOrBinary()
 
                 is EmptyContent -> ""
 

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kover)
     id("com.vanniktech.maven.publish") version "0.33.0"
 }
 
@@ -68,11 +69,27 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 }
 
+// Kover only instruments the JVM-backed source sets (commonMain + jvmMain) for a KMP module, which
+// is exactly what jvmTest already exercises — see the "fastest test gate" note in CLAUDE.md. The
+// `total` report variant merges the plain jvm() variant with the Android variant so both count
+// toward one figure. Run `./gradlew :ktor2curl:koverHtmlReportTotal` for a browsable gap report.
+kover {
+    reports {
+        total {
+            verify {
+                rule {
+                    minBound(100)
+                }
+            }
+        }
+    }
+}
+
 mavenPublishing {
     coordinates(
         groupId = "io.github.kabirnayeem99",
         artifactId = "ktor2curl",
-        version = "2.0.1",
+        version = "3.0.0",
     )
 
     pom {
