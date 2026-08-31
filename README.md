@@ -21,7 +21,7 @@ Kotlin 2.3+, Ktor 3.5+, Gradle 7.0+.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kabirnayeem99:ktor2curl:3.0.0")
+    implementation("io.github.kabirnayeem99:ktor2curl:3.0.1")
 }
 ```
 

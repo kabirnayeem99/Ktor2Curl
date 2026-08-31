@@ -98,7 +98,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.kabirnayeem99",
         artifactId = "ktor2curl",
-        version = "3.0.0",
+        version = "3.0.1",
     )
 
     pom {

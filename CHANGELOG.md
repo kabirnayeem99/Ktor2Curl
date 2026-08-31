@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-08-31
+
+### Added
+
+- KDoc across the public API: the `KtorToCurl` plugin, `CurlLogger`, `KtorToCurlConfig`, and
+  `CurlOptions` all previously had little or no documentation on their main entry points.
+- Real Dokka-generated API docs. The javadoc.jar published to Maven Central for `3.0.0` was empty
+  (no Dokka configured); this release wires up Dokka so javadoc.io renders actual documentation,
+  with `Module.md` as the landing-page overview.
+- `docs/API.md`: a runnable example per `KtorToCurlConfig` / `CurlOptions` option.
+- `CONTRIBUTING.md`, split out of the README.
+
+### Changed
+
+- README trimmed down, with usage details moved to `docs/API.md`.
+
 ## [3.0.0] - 2026-08-31
 
 ### Breaking
@@ -90,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quoting (POSIX / PowerShell / Windows CMD), and the `KtorToCurl` Ktor client
   plugin. KMP targets: `android`, `jvm`, `iosX64`, `iosArm64`, `iosSimulatorArm64`.
 
+[3.0.1]: https://github.com/kabirnayeem99/Ktor2Curl/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kabirnayeem99/Ktor2Curl/compare/v2.0.1...v3.0.0
 [2.0.1]: https://github.com/kabirnayeem99/Ktor2Curl/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/kabirnayeem99/Ktor2Curl/releases/tag/v2.0.0
