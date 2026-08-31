@@ -113,7 +113,7 @@ internal suspend fun generateCurl(
  * when a per-part Content-Type is present). On any failure a single `[multipart body
  * omitted]` placeholder is returned, since file/streaming parts may be one-shot.
  *
- * Bodies larger than [maxMultipartBytes] are not materialized — rendering a curl line for
+ * Bodies larger than [maxMultipartBytes] are not materialized. Rendering a curl line for
  * a multi-megabyte upload is useless and reading it all into a String would risk OOM, so the
  * placeholder is returned instead. Known oversize lengths short-circuit before the channel is
  * opened; unknown lengths are read with a hard cap.
@@ -240,7 +240,7 @@ private val USERINFO_REGEX = Regex("""//[^/?#\s]*@""")
  * Regex-based, best-effort fallback used only when [URLBuilder] itself cannot parse [raw] (so the
  * precise, encoding-aware masking in [maskUrl] isn't available). Purely textual substitution: no
  * URL parsing, so it can both over- and under-match compared to the primary path, but it never
- * returns [raw] untouched when masking was requested — the fallback exists to avoid ever leaking a
+ * returns [raw] untouched when masking was requested. The fallback exists to avoid ever leaking a
  * secret onto this codepath rather than to be a general URL masker.
  */
 private fun maskUrlBestEffort(
@@ -265,8 +265,8 @@ private fun maskUrlBestEffort(
  * replaces the value with a quoted [CurlOptions.maskPlaceholder]. Keys match case-insensitively.
  *
  * Being regex-based rather than a real JSON parse, this can also match a `"key": ...` shape that
- * occurs inside a string *value* (e.g. a body embedding another JSON document as a string field)
- * — an accepted tradeoff to avoid a JSON parser dependency for a debug-logging tool.
+ * occurs inside a string *value* (e.g. a body embedding another JSON document as a string field).
+ * This is an accepted tradeoff to avoid a JSON parser dependency for a debug-logging tool.
  */
 private fun redactJson(
     body: String,
@@ -285,7 +285,7 @@ private val SEMICOLON_JOINED_HEADERS = setOf("Cookie")
 
 /**
  * Joins multiple values of one header. Per RFC 9110 field values combine with a comma;
- * the [Cookie] header is the exception (RFC 6265 §5.4 separates cookie-pairs with `; `).
+ * the `Cookie` header is the exception (RFC 6265 §5.4 separates cookie-pairs with `; `).
  * Matching is case-insensitive.
  */
 private fun joinHeaderValues(

@@ -2,6 +2,20 @@ package io.github.kabirnayeem99.ktor2curl
 
 import io.ktor.client.request.HttpRequestBuilder
 
+/**
+ * Mutable configuration block for the [KtorToCurl] plugin, populated inside
+ * `install(KtorToCurl) { ... }`. Every property has a safe default, so the minimal setup is just
+ * setting [logger]:
+ *
+ * ```kotlin
+ * install(KtorToCurl) {
+ *     logger = CurlLogger.console()
+ * }
+ * ```
+ *
+ * Converted once to an immutable [CurlOptions] at plugin-install time via [toOptions]; changes
+ * made after `install {}` has run have no effect.
+ */
 class KtorToCurlConfig {
     /** Sink the rendered curl command is shipped to. No-op by default. */
     var logger: CurlLogger =
@@ -48,13 +62,13 @@ class KtorToCurlConfig {
     /** When true, injects `--insecure` (skip TLS certificate verification). */
     var insecure: Boolean = false
 
-    /** When set (>= 0), injects `--connect-timeout <seconds>` — cap on the connection phase. */
+    /** When set (>= 0), injects `--connect-timeout <seconds>`, capping the connection phase. */
     var connectTimeoutSeconds: Int? = null
 
-    /** When set (>= 0), injects `--max-time <seconds>` — cap on the whole transfer. */
+    /** When set (>= 0), injects `--max-time <seconds>`, capping the whole transfer. */
     var maxTimeSeconds: Int? = null
 
-    /** When set (>= 0), injects `--retry <count>` — number of retries on transient failures. */
+    /** When set (>= 0), injects `--retry <count>`, the number of retries on transient failures. */
     var retry: Int? = null
 
     /** When false, all header arguments (and the inferred `Content-Type`) are omitted. */

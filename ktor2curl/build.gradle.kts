@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.kover)
+    alias(libs.plugins.dokka)
     id("com.vanniktech.maven.publish") version "0.33.0"
 }
 
@@ -82,6 +83,14 @@ kover {
                 }
             }
         }
+    }
+}
+
+// Module.md supplies the module/package overview shown on the generated docs' front page
+// (and on javadoc.io, once a release with real Dokka output ships) instead of Dokka's blank default.
+dokka {
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
     }
 }
 

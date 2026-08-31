@@ -4,6 +4,30 @@ import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.HttpSendPipeline
 
+/**
+ * Ktor client plugin that renders every outgoing request as a runnable `curl` command and hands it
+ * to [KtorToCurlConfig.logger].
+ *
+ * Install it once on a client:
+ *
+ * ```kotlin
+ * val client = HttpClient(CIO) {
+ *     install(KtorToCurl) {
+ *         logger = CurlLogger.console()
+ *         maskedHeaders = setOf(HttpHeaders.Authorization)
+ *     }
+ * }
+ * ```
+ *
+ * Every request sent through [client] then logs a curl command. See [KtorToCurlConfig] for the
+ * full list of options (masking, excluded headers, shell dialect, truncation, and more).
+ *
+ * Requests are captured *after* other plugins (e.g. `ContentNegotiation`) have serialized the
+ * body, so the rendered curl matches what actually goes out on the wire, not the raw Kotlin
+ * object passed to `setBody`.
+ *
+ * For a one-off render without installing a plugin, use [HttpRequestBuilder.toCurl] instead.
+ */
 val KtorToCurl =
     createClientPlugin("KtorToCurl", ::KtorToCurlConfig) {
         val logger = pluginConfig.logger
@@ -27,5 +51,17 @@ val KtorToCurl =
 /**
  * Renders this request as a runnable `curl` command without installing the [KtorToCurl] plugin.
  * Useful for one-off debugging, tests, or custom logging pipelines.
+ *
+ * ```kotlin
+ * val request = HttpRequestBuilder().apply {
+ *     url("https://api.example.com/users")
+ *     method = HttpMethod.Post
+ *     setBody("""{"name":"Alice"}""")
+ * }
+ * println(request.toCurl())
+ * ```
+ *
+ * @param options Rendering options (masking, shell dialect, truncation, and more). Defaults to
+ *   [CurlOptions] with no masking or exclusions applied.
  */
 suspend fun HttpRequestBuilder.toCurl(options: CurlOptions = CurlOptions()): String = generateCurl(request = this, options = options)

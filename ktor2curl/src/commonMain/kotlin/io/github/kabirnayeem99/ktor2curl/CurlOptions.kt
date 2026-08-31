@@ -1,6 +1,6 @@
 package io.github.kabirnayeem99.ktor2curl
 
-/** Target shell the emitted curl command is meant to be pasted into — drives argument quoting. */
+/** Target shell the emitted curl command is meant to be pasted into. Drives argument quoting. */
 enum class CurlShell {
     /** POSIX sh/bash/zsh. Single-quote wrapping, `'` escaped as `'\''`. */
     Posix,
@@ -13,8 +13,8 @@ enum class CurlShell {
 }
 
 /**
- * Transforms a single header value just before it is rendered. Receives the header [name] and one
- * [value] (headers may be multi-valued, so this is invoked per value). Return a replacement string
+ * Transforms a single header value just before it is rendered. Receives the header name and one
+ * value (headers may be multi-valued, so this is invoked per value). Return a replacement string
  * to rewrite the value (e.g. decode a Basic-Auth credential, truncate a bearer token), or `null` to
  * omit that value entirely. If every value of a header is omitted, the header disappears from the
  * output. Runs *after* [CurlOptions.excludedHeaders] and [CurlOptions.maskedHeaders], so a masked
@@ -25,6 +25,9 @@ typealias HeaderTransformer = (name: String, value: String) -> String?
 /**
  * Immutable rendering options for [toCurl] / the [KtorToCurl] plugin. All masking is applied
  * before quoting, and all header/query/JSON-key matching is case-insensitive.
+ *
+ * [KtorToCurlConfig] wraps this with a mutable DSL for plugin installation; construct
+ * [CurlOptions] directly when calling [toCurl] outside the plugin.
  */
 data class CurlOptions(
     /** Header names dropped from output entirely. */
@@ -51,11 +54,11 @@ data class CurlOptions(
     val followRedirects: Boolean = false,
     /** When true, injects `--insecure` (skip TLS certificate verification). */
     val insecure: Boolean = false,
-    /** When set (>= 0), injects `--connect-timeout <seconds>` — cap on the connection phase. */
+    /** When set (>= 0), injects `--connect-timeout <seconds>`, capping the connection phase. */
     val connectTimeoutSeconds: Int? = null,
-    /** When set (>= 0), injects `--max-time <seconds>` — cap on the whole transfer. */
+    /** When set (>= 0), injects `--max-time <seconds>`, capping the whole transfer. */
     val maxTimeSeconds: Int? = null,
-    /** When set (>= 0), injects `--retry <count>` — number of retries on transient failures. */
+    /** When set (>= 0), injects `--retry <count>`, the number of retries on transient failures. */
     val retry: Int? = null,
     /** When false, all header arguments (and the inferred `Content-Type`) are omitted. */
     val showHeaders: Boolean = true,
@@ -81,7 +84,7 @@ data class CurlOptions(
 ) {
     /**
      * Precompiled per-key redaction patterns for [maskedJsonKeys], built once per [CurlOptions]
-     * instance instead of on every [generateCurl] call — this plugin runs once per outgoing
+     * instance instead of on every [generateCurl] call. This plugin runs once per outgoing
      * request, so recompiling a [Regex] per masked key per request would repeat needless work.
      */
     internal val maskedJsonKeyRegexes: List<Regex> by lazy {
