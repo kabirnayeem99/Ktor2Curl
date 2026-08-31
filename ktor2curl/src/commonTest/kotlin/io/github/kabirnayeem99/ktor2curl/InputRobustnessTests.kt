@@ -14,7 +14,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.IllegalHeaderValueException
 import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteChannel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -209,21 +212,36 @@ class InputRobustnessTests {
     }
 
     @Test
-    fun `CancellationException during multipart materialization is rethrown not swallowed into multipart body omitted`() {
-        val content =
-            MultiPartFormDataContent(
-                formData {
-                    append(
-                        "file",
-                        ChannelProvider(null) { throw CancellationException("simulated cancellation during multipart read") },
-                    )
-                },
-            )
+    fun `CancellationException during multipart materialization is rethrown not swallowed into multipart body omitted`(): Unit =
+        runBlocking {
+            // A channel that never supplies data and never closes, so parseMultipartFormParts is
+            // guaranteed to be suspended inside its internal readRemaining() call once this reaches
+            // the async block below — deterministic, unlike racing a background writer coroutine
+            // that may or may not have thrown yet by the time the assertion runs (that version was
+            // flaky in CI). Cancelling the coroutine hosting the suspended read is what must surface
+            // as CancellationException through parseMultipartFormParts's own catch block, not a
+            // background dispatcher race.
+            val neverEndingChannel = ByteChannel(false)
+            val content =
+                MultiPartFormDataContent(
+                    formData {
+                        append("file", ChannelProvider(null) { neverEndingChannel })
+                    },
+                )
 
-        assertFailsWith<CancellationException> {
-            runBlocking { coroutineScope { parseMultipartFormParts(content) } }
+            val deferred =
+                async(start = CoroutineStart.UNDISPATCHED) {
+                    coroutineScope { parseMultipartFormParts(content) }
+                }
+            // UNDISPATCHED runs synchronously up to the first suspension point (readRemaining on the
+            // never-ending channel), so by the time async() returns control here the coroutine is
+            // already parked there.
+            deferred.cancel(CancellationException("simulated cancellation during multipart read"))
+
+            assertFailsWith<CancellationException> {
+                deferred.await()
+            }
         }
-    }
 
     // --- shouldLog throwing: locks in actual (not necessarily desired) behavior ------------------------
 

@@ -1,44 +1,23 @@
-# Ktor2Curl: A Ktor Plugin for Generating cURL Commands
+# Ktor2Curl
 
-Transform Ktor HTTP requests into runnable `curl` commands for debugging and logging. Pure Kotlin
-library supporting KMP (Android, iOS, JVM) and standard Android projects.
+Turns Ktor HTTP requests into runnable `curl` commands for debugging and logging. Pure Kotlin,
+works on Android, iOS, and JVM (KMP).
 
 Inspired by [Ok2Curl](https://github.com/mrmike/Ok2Curl) for OkHttp.
 
 ## Features
 
-- **Multi-platform**: Works on Android, iOS, JVM, and KMP projects
-- **Zero configuration**: Install, add to client config, done
-- **Sensitive data masking**: Redact auth tokens, API keys, and custom headers
-- **Flexible logging**: Custom logger interface - send to Logcat, console, HTTP, files
-- **Multipart handling**: Renders form-data and file uploads correctly
-- **Header control**: Include, exclude, or mask specific headers per request
+- Zero-config install — add the plugin, done
+- Mask sensitive headers (tokens, API keys) before they hit your logs
+- Exclude noisy headers entirely
+- Correct multipart/form-data and file-upload rendering
+- Bring your own logger — console, Logcat, remote sink, anything
 
 ## Requirements
 
-- **Kotlin**: 2.0+
-- **Ktor**: 3.0+
-- **Gradle**: 7.0+
+Kotlin 2.3+, Ktor 3.5+, Gradle 7.0+.
 
-## Installation
-
-### Kotlin Multiplatform Projects (Recommended)
-
-Add to your `build.gradle.kts`:
-
-```kotlin
-val commonMain by getting {
-    dependencies {
-        implementation("io.github.kabirnayeem99:ktor2curl:3.0.0")
-    }
-}
-```
-
-Supports all KMP targets: Android, iOS (arm64/x64/simulator), JVM.
-
-### Android Projects Only
-
-#### Kotlin DSL (`build.gradle.kts`)
+## Install
 
 ```kotlin
 dependencies {
@@ -46,168 +25,77 @@ dependencies {
 }
 ```
 
-#### Groovy DSL (`build.gradle`)
-
-```groovy
-dependencies {
-    implementation 'io.github.kabirnayeem99:ktor2curl:3.0.0'
-}
-```
-
-### Verify Installation
-
-After adding the dependency, run:
-
-```bash
-./gradlew build
-```
-
-If you hit Kotlin version mismatch, ensure your project uses Kotlin 2.0+ (
-see [Troubleshooting](#troubleshooting)).
+Same snippet for KMP (`commonMain`) and Android-only projects.
 
 ## Quick Start
-
-### Basic Setup (2 minutes)
 
 ```kotlin
 val client = HttpClient(CIO) {
     install(KtorToCurl) {
-        logger = CurlLogger.console()  // or use Android Log.d(), your logging framework, etc.
+        logger = CurlLogger.console() // or Log.d(), a file sink, anything
     }
 }
 
-// Every request via this client now logs a curl command
 client.post("https://api.example.com/users") {
-    headers {
-        append(HttpHeaders.Authorization, "Bearer YOUR_TOKEN")
-        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-    }
+    headers.append(HttpHeaders.Authorization, "Bearer YOUR_TOKEN")
+    contentType(ContentType.Application.Json)
     setBody("""{"name":"Alice"}""")
 }
 ```
-
-**Output:**
 
 ```bash
 curl -H 'Authorization: Bearer YOUR_TOKEN' -H 'Content-Type: application/json' 'https://api.example.com/users' --data-binary '{"name":"Alice"}'
 ```
 
-### With Sensitive Data Masking
-
-Hide API keys, tokens, and custom auth headers from logs:
+### Masking sensitive headers
 
 ```kotlin
-val client = HttpClient(CIO) {
-    install(KtorToCurl) {
-        logger =
-            object : CurlLogger {
-                override suspend fun log(curl: String) {
-                    Log.d("API", curl)
-                }
-            }
-        maskedHeaders = setOf(
-            HttpHeaders.Authorization,
-            "X-API-Key",
-            "X-Session-Token"
-        )
-    }
+install(KtorToCurl) {
+    logger = CurlLogger.console()
+    maskedHeaders = setOf(HttpHeaders.Authorization, "X-API-Key")
+    excludedHeaders = setOf(HttpHeaders.UserAgent) // dropped entirely, not just masked
 }
 ```
-
-**Output:**
 
 ```bash
 curl -H 'Authorization: [masked]' -H 'Content-Type: application/json' 'https://api.example.com/users' --data-binary '{"name":"Alice"}'
 ```
 
-### Hide Unnecessary Headers
+## Configuration
 
-Remove User-Agent, Content-Length, or other headers from logs:
+| Property          | Type          | Default      | Purpose                                |
+|--------------------|---------------|--------------|-----------------------------------------|
+| `logger`           | `CurlLogger`  | No-op        | Where rendered curl commands go         |
+| `maskedHeaders`     | `Set<String>` | `emptySet()` | Replace values with `[masked]`          |
+| `excludedHeaders`   | `Set<String>` | `emptySet()` | Drop headers entirely                   |
+| `maskedQueryParams` | `Set<String>` | `emptySet()` | Mask query-param values                 |
+| `maskedJsonKeys`    | `Set<String>` | `emptySet()` | Deep-redact JSON body fields            |
+| `shell`             | `CurlShell`   | `Posix`      | Quoting dialect (Posix/PowerShell/Cmd)  |
 
-```kotlin
-val client = HttpClient(CIO) {
-    install(KtorToCurl) {
-        logger =
-            object : CurlLogger {
-                override suspend fun log(curl: String) {
-                    Log.d("API", curl)
-                }
-            }
-        excludedHeaders = setOf(
-            HttpHeaders.UserAgent,
-            HttpHeaders.ContentLength
-        )
-        maskedHeaders = setOf(HttpHeaders.Authorization)
-    }
-}
-```
+See [`KtorToCurlConfig.kt`](ktor2curl/src/commonMain/kotlin/io/github/kabirnayeem99/ktor2curl/KtorToCurlConfig.kt)
+for the full list (timeouts, retries, truncation, multi-line output, and more).
 
-### Real-World Example: Protected API
+## Advanced
 
-```kotlin
-client.post("https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json") {
-    headers {
-        append(HttpHeaders.Authorization, "Basic SXNyYWVsIGtpbGxzIGNoaWxkcmVuLg")
-        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-    }
-    setBody("""{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}""")
-}
-```
-
-**Output:**
-
-```bash
-curl -H 'Authorization: [masked]' -H 'Content-Type: application/json' 'https://data.techforpalestine.org/api/v2/killed-in-gaza.min.json' --data-binary '{"en_name":"Mazen Ahmed Mohammed Al-Kahlout","name":"مازن أحمد محمد الكحلوت","age":52,"dob":"1972-02-05","sex":"m","id":"985194547","source":"u"}'
-```
-
-## Configuration Reference
-
-| Property          | Type          | Default      | Purpose                                                          |
-|-------------------|---------------|--------------|------------------------------------------------------------------|
-| `logger`          | `CurlLogger`  | No-op        | Implementation to handle curl output (log it, send it, store it) |
-| `maskedHeaders`   | `Set<String>` | `emptySet()` | Headers to replace with `[masked]` (auth, tokens, keys)          |
-| `excludedHeaders` | `Set<String>` | `emptySet()` | Headers to skip entirely in output                               |
-
-## Advanced Usage
-
-### Custom Logger Implementation
-
-Send curl commands to a remote service, database, or aggregation tool:
+**Custom logger** — send curl output anywhere:
 
 ```kotlin
 class RemoteCurlLogger : CurlLogger {
-    override suspend fun log(curl: String) {
-        // Send to your backend, analytics, or debug dashboard
-        analyticsService.trackRequest(curl)
-    }
-}
-
-val client = HttpClient(CIO) {
-    install(KtorToCurl) {
-        logger = RemoteCurlLogger()
-    }
+    override suspend fun log(curl: String) = analyticsService.trackRequest(curl)
 }
 ```
 
-### Multipart/Form-Data Support
-
-File uploads and form fields render correctly:
+**Multipart** — renders correctly out of the box:
 
 ```kotlin
 client.post("https://api.example.com/upload") {
-    setBody(
-        MultiPartFormDataContent(
-            formData {
-                append(
-                    "file", InputProvider { "file content".byteInputStream() },
-                    Headers.build { append(HttpHeaders.ContentDisposition, "filename=data.txt") })
-                append("field", "value")
-            }
-        ))
+    setBody(MultiPartFormDataContent(formData {
+        append("file", InputProvider { "file content".byteInputStream() },
+            Headers.build { append(HttpHeaders.ContentDisposition, "filename=data.txt") })
+        append("field", "value")
+    }))
 }
 ```
-
-**Output:**
 
 ```bash
 curl 'https://api.example.com/upload' -F 'file=@data.txt' -F 'field=value'
@@ -215,136 +103,31 @@ curl 'https://api.example.com/upload' -F 'file=@data.txt' -F 'field=value'
 
 ## Troubleshooting
 
-### Issue: "Dependency not found" or "Module resolution error"
-
-**Cause:** Kotlin version mismatch or incorrect repository.
-
-**Fix:**
-
-- Ensure Kotlin ≥ 2.0: `kotlin = "2.3.0"` or later in `plugins` block
-- Check repository is available:
-  ```kotlin
-  repositories {
-      mavenCentral()
-      google()
-  }
-  ```
-- Verify dependency version exists
-  on [Maven Central](https://mvnrepository.com/artifact/io.github.kabirnayeem99/ktor2curl)
-
-### Issue: Curl command not logged
-
-**Cause:** Logger implementation not called.
-
-**Fix:**
-
-- Verify `logger` is set in plugin config
-- Check your logger is enabled (not filtered by Log level)
-- Confirm plugin is installed **before** making requests:
-  ```kotlin
-  val client = HttpClient {
-      install(KtorToCurl) { ... }  // Must be before other requests
-  }
-  ```
-- Ensure request actually succeeds (failed requests may not log)
-
-### Issue: Sensitive data appears in logs
-
-**Cause:** Header not in `maskedHeaders` set.
-
-**Fix:**
-
-- Use exact header name (case-sensitive if using string literals):
-  ```kotlin
-  maskedHeaders = setOf(
-      "Authorization",      // ✓ Correct
-      "X-Custom-Token",
-      HttpHeaders.Authorization  // ✓ Also correct (from Ktor)
-  )
-  ```
-
-### Issue: Headers still appear despite `excludedHeaders`
-
-**Cause:** Header name mismatch (case/spelling).
-
-**Fix:**
-
-- Enable debug logging in your plugin and compare exact header names in requests
-- Use `HttpHeaders.HEADER_NAME` constants from Ktor when possible
-
-### Issue: Gradle build fails on iOS (KMP)
-
-**Cause:** Kotlin < 2.3.0 incompatible with Ktor 3.5 on Native.
-
-**Fix:**
-
-- Upgrade to Kotlin ≥ 2.3.0:
-  ```kotlin
-  plugins {
-      kotlin("multiplatform") version "2.3.0"
-  }
-  ```
+- **Dependency won't resolve** — make sure `mavenCentral()` is in `repositories {}` and Kotlin is
+  2.3+.
+- **Nothing gets logged** — confirm `logger` is set, the plugin is installed before any requests
+  are made, and the request actually completes (failed requests may not reach the send pipeline).
+- **A header isn't masked** — header names match case-insensitively, but check for typos; prefer
+  `HttpHeaders.*` constants over string literals.
+- **iOS build fails** — Kotlin must be 2.3.0+ (older versions can't consume Ktor 3.5's Darwin klib
+  ABI).
 
 ## Contributing
 
-Contributions welcome. Before submitting:
-
-1. **Fork the repo** (click "Fork" on GitHub or run:
-   `git clone --recursive https://github.com/YOUR_USERNAME/ktor2curl.git`)
-2. **Create a branch** for your feature:
-   ```bash
-   git checkout -b feature/add-cookie-masking
-   ```
-3. **Write tests** in `ktor2curl/src/commonTest/` (see existing test structure)
-4. **Run tests locally:**
-   ```bash
-   ./gradlew :ktor2curl:jvmTest --console=plain
-   ```
-5. **Format code** (hooks auto-run pre-commit):
-   ```bash
-   ./gradlew ktlintFormat
-   ```
-6. **Push and create a Pull Request** with a clear description of your change
-
-### How to Fork
-
-1. Visit the [GitHub repo](https://github.com/kabirnayeem99/Ktor2Curl)
-2. Click **Fork** (top-right corner)
-3. Clone your fork:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/Ktor2Curl.git
-   cd Ktor2Curl
-   ```
-4. Add upstream to stay in sync:
-   ```bash
-   git remote add upstream https://github.com/kabirnayeem99/Ktor2Curl.git
-   git fetch upstream
-   ```
-5. Create your feature branch and start coding:
-   ```bash
-   git checkout -b feature/your-idea
-   ```
-
-### Testing Your Changes
-
-Run the full test suite to verify no regressions:
-
-```bash
-./gradlew :ktor2curl:jvmTest :ktor2curl:testDebugUnitTest :ktor2curl:iosSimulatorArm64Test
-```
-
-Or just JVM for quick feedback:
-
-```bash
-./gradlew :ktor2curl:jvmTest --console=plain
-```
+1. Fork and clone: `git clone https://github.com/YOUR_USERNAME/Ktor2Curl.git`
+2. Branch: `git checkout -b feature/your-idea`
+3. Add tests under `ktor2curl/src/commonTest/`
+4. Run `./gradlew :ktor2curl:jvmTest --console=plain` (fast) or add
+   `:ktor2curl:testDebugUnitTest :ktor2curl:iosSimulatorArm64Test` for the full gate
+5. `./gradlew ktlintFormat` before committing
+6. Open a PR with a clear description
 
 ## Support
 
-- [Ktor Client Documentation](https://ktor.io/docs/client-index.html)
-- [Issues](https://github.com/kabirnayeem99/Ktor2Curl/issues)
-- [Discussions](https://github.com/kabirnayeem99/Ktor2Curl/discussions)
+[Ktor docs](https://ktor.io/docs/client-index.html) ·
+[Issues](https://github.com/kabirnayeem99/Ktor2Curl/issues) ·
+[Discussions](https://github.com/kabirnayeem99/Ktor2Curl/discussions)
 
 ## License
 
-MIT - See LICENSE file for details.
+MIT — see [LICENSE](LICENSE).
